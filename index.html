@@ -3,6 +3,7 @@
 <head>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -153,7 +154,7 @@
             </div>
 
             <div id="graph-container" class="option">
-                
+                <canvas id="chart"></canvas>
             </div>
 
             <div id="formula-container" class="option">
@@ -169,191 +170,185 @@
     </div>
     
     <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['\\(', '\\)']],
-                displayMath: [['\\[', '\\]']],
-                processEscapes: true,
-                processEnvironments: true,
-                packages: ['base', 'ams']
+        const blendModeSelect = document.querySelector('#blend-mode');
+        const colorSelect = document.querySelector('#color');
+        const darkModeToggle = document.querySelector('#dark-mode');
+    
+        const blendModes = {
+            normal: {
+                formula: '\\text{Result} = T',
+                definition: 'This mode simply retains the top layer.',
+                function: 'normal(T, B){ return T; }',
             },
-            options: {
-                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-                ignoreHtmlClass: 'tex2jax_ignore',
-                renderActions: {
-                    find: [10, function (doc) {
-                        for (const math of doc.math) {
-                            if (!math.mathml && math.inputJax === 'TeX') {
-                                math.state = MathJax.ElementJax.STATE.PROCESSED;
-                                math.outputJax.previewClear(math);
-                            }
-                        }
-                    }]
-                }
+            dissolve: {
+                formula: '\\text{Result} = \\text{randomly selects T or B}',
+                definition: 'Affects the layer randomly, either showing the top or bottom layer per pixel.',
+                function: 'dissolve(T, B){ return Math.random() < 0.5 ? T : B; }',
             },
-            loader: {
-                load: ['input/tex', 'output/chtml', 'ui/menu']
+            darken: {
+                formula: '\\text{Result} = \\min(B, T)',
+                definition: 'This mode selects the darker color between the top and bottom layer for each pixel.',
+                function: 'darken(T, B){ return Math.min(B, T); }',
+            },
+            multiply: {
+                formula: '\\text{Result} = B \\times T',
+                definition: 'This mode multiplies the colors of the top and bottom layer, resulting in a darker color.',
+                function: 'multiply(T, B){ return B * T; }',
+            },
+            'color-burn': {
+                formula: '\\text{Result} = 1 - \\left(1 - \\frac{B}{T}\\right)',
+                definition: 'Intensifies the darker tones in your image.',
+                function: 'colorBurn(T, B){ return 1 - (1 - B / T); }',
+            },
+            'linear-burn': {
+                formula: '\\text{Result} = B + T - 1',
+                definition: 'Combines Multiply and Subtract blend modes. The result is darker than Multiply but lighter than Subtract.',
+                function: 'linearBurn(T, B){ return B + T - 1; }',
+            },
+            'darker-color': {
+                formula: '\\text{Result} = \\text{darker}(B, T)',
+                definition: 'Compares the total of all channel values for the blend and base color and retains the lower value color.',
+                function: 'darkerColor(T, B){ return darker(B, T); }', // placeholder
+            },
+            lighten: {
+                formula: '\\text{Result} = \\max(B, T)',
+                definition: 'This mode selects the lighter color between the top and bottom layer for each pixel.',
+                function: 'lighten(T, B){ return Math.max(B, T); }',
+            },
+            screen: {
+                formula: '\\text{Result} = 1 - (1 - B) \\times (1 - T)',
+                definition: 'This mode multiplies the inverses of the colors of the top and bottom layer, resulting in a lighter color.',
+                function: 'screen(T, B){ return 1 - (1 - B) * (1 - T); }',
+            },
+            'color-dodge': {
+                formula: '\\text{Result} = \\frac{B}{1 - T}',
+                definition: 'Brightens your image by decreasing contrast.',
+                function: 'colorDodge(T, B){ return B / (1 - T); }',
+            },
+            'linear-dodge': {
+                formula: '\\text{Result} = B + T',
+                definition: 'Additive blend mode, similar to Screen but with more intense results.',
+                function: 'linearDodge(T, B){ return B + T; }',
+            },
+            'lighter-color': {
+                formula: '\\text{Result} = \\text{lighter}(B, T)',
+                definition: 'Compares the total of all channel values for the blend and base color and retains the higher value color.',
+                function: 'lighterColor(T, B){ return lighter(B, T); }', // placeholder
+            },
+            overlay: {
+                formula: '\\text{Result} = (B < 0.5) ? (2 \\times B \\times T) : \\left(1 - 2 \\times (1 - B) \\times (1 - T)\\right)',
+                definition: 'This mode multiplies or screens the colors depending on the base color.',
+                function: 'overlay(T, B){ return (B < 0.5) ? (2 * B * T) : (1 - 2 * (1 - B) * (1 - T)); }',
+            },
+            'soft-light': {
+                formula: '\\text{Result} = (T < 0.5) ? \\left(2 \\times B \\times T + B^2\\right) : \\left(2 \\times B \\times (1 - T) + \\sqrt{B}\\right)',
+                definition: 'This mode darkens or lightens the colors by decreasing or increasing the contrast, depending on the blend color.',
+                function: 'softLight(T, B){ return (T < 0.5) ? (2 * B * T + B*B) : (2 * B * (1 - T) + Math.sqrt(B)); }',
+            },
+            'hard-light': {
+                formula: '\\text{Result} = (T < 0.5) ? (2 \\times B \\times T) : \\left(1 - 2 \\times (1 - B) \\times (1 - T)\\right)',
+                definition: 'This mode multiplies or screens the colors depending on the blend color.',
+                function: 'hardLight(T, B){ return (T < 0.5) ? (2 * B * T) : (1 - 2 * (1 - B) * (1 - T)); }',
+            },
+            'vivid-light': {
+                formula: '\\text{Result} = \\text{vividLight}(B, T)',
+                definition: 'Burns or dodges the colors by increasing or decreasing the contrast, depending on the blend color.',
+                function: 'vividLight(T, B){ return vividLight(B, T); }', // placeholder
+            },
+            'linear-light': {
+                formula: '\\text{Result} = \\text{linearLight}(B, T)',
+                definition: 'Burns or dodges the colors by decreasing or increasing the brightness, depending on the blend color.',
+                function: 'linearLight(T, B){ return linearLight(B, T); }', // placeholder
+            },
+            'pin-light': {
+                formula: '\\text{Result} = \\text{pinLight}(B, T)',
+                definition: 'Replaces the colors, depending on the blend color.',
+                function: 'pinLight(T, B){ return pinLight(B, T); }', // placeholder
+            },
+            'hard-mix': {
+                formula: '\\text{Result} = \\text{hardMix}(B, T)',
+                definition: 'Adds the red, green, and blue channel values of the blend color to those of the base color.',
+                function: 'hardMix(T, B){ return hardMix(B, T); }', // placeholder
+            },
+            difference: {
+                formula: '\\text{Result} = \\left|B - T\\right|',
+                definition: 'This mode subtracts the bottom layer color from the top layer or vice versa, depending on which one is lighter.',
+                function: 'difference(T, B){ return Math.abs(B - T); }',
+            },
+            exclusion: {
+                formula: '\\text{Result} = B + T - 2 \\times B \\times T',
+                definition: 'This mode creates an effect similar to Difference, but with lower contrast.',
+                function: 'exclusion(T, B){ return B + T - 2 * B * T; }',
+            },
+            subtract: {
+                formula: '\\text{Result} = B - T',
+                definition: 'Looks at the color information in each channel and subtracts the blend color from the base color.',
+                function: 'subtract(T, B){ return B - T; }',
+            },
+            divide: {
+                formula: '\\text{Result} = \\frac{B}{T}',
+                definition: 'Looks at the color information in each channel and divides the base color by the blend color.',
+                function: 'divide(T, B){ return B / T; }',
+            },
+            hue: {
+                formula: '\\text{Result} = \\text{HSL}(\\text{Hue}(T), \\text{Saturation}(B), \\text{Luminance}(B))',
+                definition: 'Result uses the hue of the TopLayer and the saturation and luminosity of the BottomLayer.',
+                function: 'hue(T, B){ return hsl(hue(T), saturation(B), luminance(B)); }', // placeholder
+            },
+            saturation: {
+                formula: '\\text{Result} = \\text{HSL}(\\text{Hue}(B), \\text{Saturation}(T), \\text{Luminance}(B))',
+                definition: 'Result uses the saturation of the TopLayer and the hue and luminosity of the BottomLayer.',
+                function: 'saturation(T, B){ return hsl(hue(B), saturation(T), luminance(B)); }', // placeholder
+            },
+            color: {
+                formula: '\\text{Result} = \\text{HSL}(\\text{Hue}(T), \\text{Saturation}(T), \\text{Luminance}(B))',
+                definition: 'Result uses the hue and saturation of the TopLayer and the luminosity of the BottomLayer.',
+                function: 'color(T, B){ return hsl(hue(T), saturation(T), luminance(B)); }', // placeholder
+            },
+            luminosity: {
+                formula: '\\text{Result} = \\text{HSL}(\\text{Hue}(B), \\text{Saturation}(B), \\text{Luminance}(T))',
+                definition: 'Result uses the luminosity of the TopLayer and the hue and saturation of the BottomLayer.',
+                function: 'luminosity(T, B){ return hsl(hue(B), saturation(B), luminance(T)); }', // placeholder
             }
         };
 
-        window.onload = function() {
-            const blendModeSelect = document.querySelector('#blend-mode');
-            const colorSelect = document.querySelector('#color');
-            const darkModeToggle = document.querySelector('#dark-mode');
-    
-            const blendModes = {
-                normal: {
-                    formula: '\\text{Result} = T',
-                    definition: 'This mode simply retains the top layer.'
-                },
-                dissolve: {
-                    formula: '',
-                    definition: 'Affects the layer randomly.'
-                },
-                darken: {
-                    formula: '\\text{Result} = \\min(B, T)',
-                    definition: 'This mode selects the darker color between the top and bottom layer for each pixel.'
-                },
-                multiply: {
-                    formula: '\\text{Result} = B \\times T',
-                    definition: 'This mode multiplies the colors of the top and bottom layer, resulting in a darker color.'
-                },
-                'color-burn': {
-                    formula: '\\text{Result} = 1 - \\frac{1 - B}{T}',
-                    definition: 'Intensifies the darker tones in your image.'
-                },
-                'linear-burn': {
-                    formula: '',
-                    definition: 'Similar to Multiply but with more intense results. Exact formula varies.'
-                },
-                'darker-color': {
-                    formula: '',
-                    definition: 'Compares the total of all channel values for the blend and base color and retains the lower value color. Exact formula varies.'
-                },
-                lighten: {
-                    formula: '\\text{Result} = \\max(B, T)',
-                    definition: 'This mode selects the lighter color between the top and bottom layer for each pixel.'
-                },
-                screen: {
-                    formula: '\\text{Result} = 1 - (1 - B) \\times (1 - T)',
-                    definition: 'This mode multiplies the inverses of the colors of the top and bottom layer, resulting in a lighter color.'
-                },
-                'color-dodge': {
-                    formula: '\\text{Result} = \\frac{B}{1 - T}',
-                    definition: 'Brightens your image by decreasing contrast.'
-                },
-                'linear-dodge': {
-                    formula: '',
-                    definition: 'Similar to Screen but with more intense results. Exact formula varies.'
-                },
-                'lighter-color': {
-                    formula: '',
-                    definition: 'Compares the total of all channel values for the blend and base color and retains the higher value color. Exact formula varies.'
-                },
-                overlay: {
-                    formula: '\\text{Result} = (B < 0.5) ? (2 \\times B \\times T) : (1 - 2 \\times (1 - B) \\times (1 - T))',
-                    definition: 'This mode multiplies or screens the colors depending on the base color.'
-                },
-                'soft-light': {
-                    formula: '\\text{Result} = (T < 0.5) ? (2 \\times B \\times T + B^2) : (2 \\times B \\times (1 - T) + \\sqrt{B})',
-                    definition: 'This mode darkens or lightens the colors by decreasing or increasing the contrast, depending on the blend color.'
-                },
-                'hard-light': {
-                    formula: '\\text{Result} = (T < 0.5) ? (2 \\times B \\times T) : (1 - 2 \\times (1 - B) \\times (1 - T))',
-                    definition: 'This mode multiplies or screens the colors depending on the blend color.'
-                },
-                'vivid-light': {
-                    formula: '',
-                    definition: 'Burns or dodges the colors by increasing or decreasing the contrast, depending on the blend color. Exact formula varies.'
-                },
-                'linear-light': {
-                    formula: '',
-                    definition: 'Burns or dodges the colors by decreasing or increasing the brightness, depending on the blend color. Exact formula varies.'
-                },
-                'pin-light': {
-                    formula: '',
-                    definition: 'Replaces the colors, depending on the blend color. Exact formula varies.'
-                },
-                'hard-mix': {
-                    formula: '',
-                    definition: 'Adds the red, green, and blue channel values of the blend color to those of the base color. Exact formula varies.'
-                },
-                difference: {
-                    formula: '\\text{Result} = |B - T|',
-                    definition: 'This mode subtracts the bottom layer color from the top layer or vice versa, depending on which one is lighter.'
-                },
-                exclusion: {
-                    formula: '\\text{Result} = B + T - 2 \\times B \\times T',
-                    definition: 'This mode creates an effect similar to Difference, but with lower contrast.'
-                },
-                subtract: {
-                    formula: '',
-                    definition: 'Looks at the color information in each channel and subtracts the blend color from the base color. Exact formula varies.'
-                },
-                divide: {
-                    formula: '',
-                    definition: 'Looks at the color information in each channel and divides the base color by the blend color. Exact formula varies.'
-                },
-                hue: {
-                    formula: '',
-                    definition: 'Result uses the hue of the TopLayer and the saturation and luminosity of the BottomLayer.'
-                },
-                saturation: {
-                    formula: '',
-                    definition: 'Result uses the saturation of the TopLayer and the hue and luminosity of the BottomLayer.'
-                },
-                color: {
-                    formula: '',
-                    definition: 'Result uses the hue and saturation of the TopLayer and the luminosity of the BottomLayer.'
-                },
-                luminosity: {
-                    formula: '',
-                    definition: 'Result uses the luminosity of the TopLayer and the hue and saturation of the BottomLayer.'
-                }
-            };
-    
-            if (darkModeToggle.checked) {
-                document.body.classList.add('dark-mode');
-            }
+        window.onload = (event) => {
+            // First, get references to the blend mode dropdown and the elements where you want to display the formula and description
+            const blendModeSelect = document.getElementById('blend-mode');
+            const blendModeMath = document.getElementById('blend-mode-math');
+            const blendModeDescriptionText = document.getElementById('blend-mode-description-text');
+            const darkModeCheckbox = document.getElementById('dark-mode');
 
-            const updateBlendMode = (mode) => {
-                if (blendModes[mode]) {
-                    document.getElementById('blend-mode-math').textContent = blendModes[mode].formula;
-                    document.getElementById('blend-mode-description-text').textContent = blendModes[mode].definition;
-                    // Run MathJax again after updating the text content
-                    MathJax.typesetPromise();
-                } else {
-                    document.getElementById('blend-mode-math').textContent = 'No formula available for this blend mode';
-                    document.getElementById('blend-mode-description-text').textContent = '';
-                }
-            };
-    
-            blendModeSelect.addEventListener('change', (event) => {
+            // Set initial colors based on checkbox status
+            document.documentElement.style.setProperty('--bg-color', darkModeCheckbox.checked ? '#333' : '#FFF');
+            document.documentElement.style.setProperty('--fg-color', darkModeCheckbox.checked ? '#eaeaea' : '#333');
+
+            // Initialize the formula and description with the current selected blend mode
+            updateBlendMode(blendModeSelect.value);
+
+            // Then, add an event listener to the dropdown that updates the formula and description when the blend mode changes
+            blendModeSelect.addEventListener('change', function(event) {
                 updateBlendMode(event.target.value);
             });
 
-            colorSelect.addEventListener('change', (event) => {
-                // No need to handle color changes
+            darkModeCheckbox.addEventListener('change', (event) => {
+                document.documentElement.style.setProperty('--bg-color', event.target.checked ? '#333' : '#FFF');
+                document.documentElement.style.setProperty('--fg-color', event.target.checked ? '#eaeaea' : '#333');
             });
 
-            darkModeToggle.addEventListener('change', (event) => {
-                if(event.target.checked) {
-                    document.documentElement.style.setProperty('--bg-color', '#333');
-                    document.documentElement.style.setProperty('--fg-color', '#eaeaea');
-                } else {
-                    document.documentElement.style.setProperty('--bg-color', '#eaeaea');
-                    document.documentElement.style.setProperty('--fg-color', '#333');
+            function updateBlendMode(blendMode) {
+                // Get the selected blend mode
+                const selectedBlendMode = blendModes[blendMode];
+
+                // Update the formula and description
+                if (selectedBlendMode) {
+                    blendModeMath.textContent = '\\[' + selectedBlendMode.formula + '\\]';
+                    blendModeDescriptionText.textContent = selectedBlendMode.definition;
+
+                    // Re-render math formulas using MathJax
+                    MathJax.typeset();
                 }
-            });
-
-            // Update blend mode initially
-            updateBlendMode(blendModeSelect.value);
-
-            // MathJax setup
-            MathJax.startup.document.state(10);
-            MathJax.startup.document.clear();
-            MathJax.startup.document.updateDocument();
-            MathJax.typesetPromise();
+            }
         };
     </script>
 </body>
