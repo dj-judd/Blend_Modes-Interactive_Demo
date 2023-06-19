@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      background-color: white;
+      color: black;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #333;
+      color: white;
+    }
+
+    .image-container {
+      position: relative;
+      width: 70%;
+      height: 0;
+      padding-bottom: 70%;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .image-container img {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .color-box {
+      height: 50vmax;
+      width: 50vmax;
+      position: absolute;
+      z-index: 1;
+      mix-blend-mode: normal;
+    }
+
+    #blend-mode-select, #color-select, #position-select {
+      margin-top: 20px;
+    }
+
+    #dark-mode-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+    }
+
+    #formula-display {
+      margin-top: 20px;
+      font-family: monospace;
+    }
+	
+	#color-box {
+	  height: 50vmax;
+	  width: 50vmax;
+	  position: absolute;
+	  z-index: 1;
+	  mix-blend-mode: normal;
+	}
+
+  </style>
+</head>
+<body>
+
+  <div class="image-container">
+    <img src="image1.jpg" id="bottom-image">
+    <div id="color-box"></div>
+  </div>
+
+  <div id="blend-mode-select">
+    <label for="blend-mode">Choose a blend mode:</label>
+    <select name="blend-mode" id="blend-mode">
+	  <option value="normal">Normal</option>
+	  <option value="multiply">Multiply</option>
+	  <option value="screen">Screen</option>
+	  <option value="overlay">Overlay</option>
+	  <option value="darken">Darken</option>
+	  <option value="lighten">Lighten</option>
+	  <option value="color-dodge">Color Dodge</option>
+	  <option value="color-burn">Color Burn</option>
+	  <option value="hard-light">Hard Light</option>
+	  <option value="soft-light">Soft Light</option>
+	  <option value="difference">Difference</option>
+	  <option value="exclusion">Exclusion</option>
+	  <option value="hue">Hue</option>
+	  <option value="saturation">Saturation</option>
+	  <option value="color">Color</option>
+	  <option value="luminosity">Luminosity</option>
+	</select>
+
+  </div>
+
+  <div id="color-select">
+    <label for="color">Choose a color:</label>
+    <input type="color" id="color" name="color" value="#ff1493">
+  </div>
+
+  <div id="color-wipe-slider">
+    <label for="color-wipe">Color Wipe:</label>
+    <input type="range" min="0" max="100" value="0" id="color-wipe">
+  </div>
+
+  <div id="formula-display">
+    <h2>Blend Mode Formula</h2>
+    <p id="formula-text"></p>
+  </div>
+
+  <div id="dark-mode-toggle">
+    <label for="dark-mode">Dark mode:</label>
+    <input type="checkbox" id="dark-mode" checked>
+  </div>
+  
+	<svg id="mouse-follow" width="250" height="100" xmlns="http://www.w3.org/2000/svg" style="display: none">
+		<path id="mouse-path" d="M0,0 h100 a20,20 0 0,1 20,20 v30 h-120 v-50" fill="#000" stroke="#fff" stroke-width="3"/>
+	</svg>
+
+  <script>
+    const colorBox = document.querySelector('#color-box');
+	const colorWipeSlider = document.querySelector('#color-wipe');
+    const blendModeSelect = document.querySelector('#blend-mode');
+    const colorSelect = document.querySelector('#color');
+    const formulaText = document.querySelector('#formula-text');
+    const svgElement = document.querySelector("#mouse-follow");
+	const imageContainer = document.querySelector(".image-container");
+	
+	const darkModeToggle = document.querySelector('#dark-mode');
+	if (darkModeToggle.checked) {
+		document.body.classList.add('dark-mode');
+	}
+
+	const formulas = {
+	  normal: 'Result = TopLayer',
+	  multiply: 'Result = BottomLayer * TopLayer',
+	  screen: 'Result = 1 - (1 - BottomLayer) * (1 - TopLayer)',
+	  overlay: 'Result = (BottomLayer < 0.5) ? (2 * BottomLayer * TopLayer) : (1 - 2 * (1 - BottomLayer) * (1 - TopLayer))',
+	  darken: 'Result = min(BottomLayer, TopLayer)',
+	  lighten: 'Result = max(BottomLayer, TopLayer)',
+	  'color-dodge': 'Result = BottomLayer / (1 - TopLayer)',
+	  'color-burn': 'Result = 1 - (1 - BottomLayer) / TopLayer',
+	  'hard-light': 'Result = (TopLayer < 0.5) ? (2 * BottomLayer * TopLayer) : (1 - 2 * (1 - BottomLayer) * (1 - TopLayer))',
+	  'soft-light': 'Result = (TopLayer < 0.5) ? (2 * BottomLayer * TopLayer + BottomLayer^2) : (2 * BottomLayer * (1 - TopLayer) + sqrt(BottomLayer))',
+	  difference: 'Result = |BottomLayer - TopLayer|',
+	  exclusion: 'Result = BottomLayer + TopLayer - 2 * BottomLayer * TopLayer',
+	  hue: 'Result uses the hue of the TopLayer, and the saturation and luminosity of the BottomLayer',
+	  saturation: 'Result uses the saturation of the TopLayer, and the hue and luminosity of the BottomLayer',
+	  color: 'Result uses the hue and saturation of the TopLayer, and the luminosity of the BottomLayer',
+	  luminosity: 'Result uses the luminosity of the TopLayer, and the hue and saturation of the BottomLayer',
+	};
+	
+	let color = colorSelect.value;
+	
+	colorBox.style.position = "absolute";
+	colorBox.style.top = "0";
+	colorBox.style.left = "0";
+	colorBox.style.height = "150%";
+	colorBox.style.width = "0"; // start with the colorBox hidden
+
+
+    blendModeSelect.addEventListener('change', (event) => {
+      colorBox.style.mixBlendMode = event.target.value;
+      formulaText.innerText = formulas[event.target.value] || 'No formula available for this blend mode';
+    });
+
+	colorSelect.addEventListener('change', (event) => {
+	  color = event.target.value;
+	  colorBox.style.background = color;
+	});
+
+    xSelect.addEventListener('change', (event) => {
+      colorBox.style.left = `${event.target.value}px`;
+    });
+
+    ySelect.addEventListener('change', (event) => {
+      colorBox.style.top = `${event.target.value}px`;
+    });
+
+    darkModeToggle.addEventListener('change', (event) => {
+      document.body.classList.toggle('dark-mode', event.target.checked);
+    });
+	
+	window.addEventListener('mousemove', function(e) {
+        svgElement.style.position = "absolute";
+        svgElement.style.left = (e.pageX + 10) + 'px';
+        svgElement.style.top = (e.pageY + 5) + 'px';
+    });
+	
+	imageContainer.addEventListener('mouseenter', function() {
+		svgElement.style.display = "block";
+	});
+
+	imageContainer.addEventListener('mouseleave', function() {
+		svgElement.style.display = "none";
+	});
+	
+	colorWipeSlider.addEventListener('input', (event) => {
+	  colorBox.style.width = `${event.target.value}%`;
+	});
+	
+	colorBox.style.position = "absolute";
+	colorBox.style.top = "0";
+	colorBox.style.left = "0";
+	colorBox.style.height = "150%";
+	colorBox.style.width = "0"; // start with the colorBox hidden
+  </script>
+
+</body>
+</html>
