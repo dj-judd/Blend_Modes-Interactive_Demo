@@ -169,10 +169,34 @@
     </div>
     
     <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                packages: ['base', 'ams']
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                renderActions: {
+                    find: [10, function (doc) {
+                        for (const math of doc.math) {
+                            if (!math.mathml && math.inputJax === 'TeX') {
+                                math.state = MathJax.ElementJax.STATE.PROCESSED;
+                                math.outputJax.previewClear(math);
+                            }
+                        }
+                    }]
+                }
+            },
+            loader: {
+                load: ['input/tex', 'output/chtml', 'ui/menu']
+            }
+        };
+
         window.onload = function() {
-            // MathJax setup
-            MathJax.typesetPromise();
-        
             const blendModeSelect = document.querySelector('#blend-mode');
             const colorSelect = document.querySelector('#color');
             const darkModeToggle = document.querySelector('#dark-mode');
@@ -286,11 +310,11 @@
                     formula: '',
                     definition: 'Result uses the luminosity of the TopLayer and the hue and saturation of the BottomLayer.'
                 }
-                };
+            };
     
             if (darkModeToggle.checked) {
                 document.body.classList.add('dark-mode');
-            }   
+            }
 
             const updateBlendMode = (mode) => {
                 if (blendModes[mode]) {
@@ -303,7 +327,7 @@
                     document.getElementById('blend-mode-description-text').textContent = '';
                 }
             };
-
+    
             blendModeSelect.addEventListener('change', (event) => {
                 updateBlendMode(event.target.value);
             });
@@ -324,7 +348,13 @@
 
             // Update blend mode initially
             updateBlendMode(blendModeSelect.value);
-        }
+
+            // MathJax setup
+            MathJax.startup.document.state(10);
+            MathJax.startup.document.clear();
+            MathJax.startup.document.updateDocument();
+            MathJax.typesetPromise();
+        };
     </script>
 </body>
 </html>
