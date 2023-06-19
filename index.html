@@ -30,7 +30,10 @@
             width: 15%;
             height: fit-content;
             margin-left: 2em;
-            padding: 1em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            padding-left: 1em;
+            padding-right: 1em;
             border: 0.15em solid currentColor;
             border-radius: 1.5em;
             display: flex;
@@ -59,7 +62,8 @@
         }
 
         #dark-mode-toggle {
-            /* margin-bottom: 2em; */
+            margin-bottom: 0em;
+            padding-bottom: 0;
         }
 
         #formula-container {
@@ -93,7 +97,7 @@
         </div>
 
         <div id="options-container">
-            <h2>Options:</h2>
+            <h2 style="margin-top: 0; margin-bottom: 0;">Options:</h2>
 
             <div id="blend-mode-select" class="option">
                 <label for="blend-mode">Choose a blend mode:</label>
@@ -154,13 +158,10 @@
 
             <div id="formula-container" class="option">
                 <h3>Blend Mode Formula</h3>
-                <p id="formula-text"></p>
+                <p id="blend-mode-math"></p>
             </div>
-
-            <div id="blend-mode-math" style="display: none;"></div>
-
             
-            <div id="dark-mode-toggle" class="option">
+            <div id="dark-mode-toggle" class="option" style="margin-bottom: 0;">
                 <label for="dark-mode">Dark mode:</label>
                 <input type="checkbox" id="dark-mode" checked>
             </div>
