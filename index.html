@@ -1,14 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
     <style>
+        :root {
+            --bg-color: #333;  /* Default to dark mode */
+            --fg-color: #eaeaea;
+        }
+        
         body {
             justify-content: center;
             align-items: center;
             transition: background-color 0.3s, color 0.3s;
+            background-color: var(--bg-color);
+            color: var(--fg-color);
         }
 
-        .dark-mode {
+        /* .dark-mode {
             background-color: #333;
             color: white;
         }
@@ -16,16 +27,13 @@
         .light-mode {
             background-color: #eaeaea;
             color: #333;
-        }
+        } */
 
         #app-container {
             width: 90%;
-
             padding: 2em;
-
             display: flex;
             flex-direction: row;
-
         }
         
         #options-container {
@@ -34,16 +42,23 @@
             height:fit-content;
             margin-left: 2em;
             padding: 1em;
-
             border: 0.15em solid currentColor;
             border-radius: 1.5em;
-
             display: flex;
             flex: 0.01;
             flex-direction: column;
             justify-content: space-between;
-
             font-family: monospace;
+        }
+
+        .option {
+            border-bottom: 0.15em solid var(--fg-color);
+            padding-top: 1em;
+            padding-bottom: 1em;
+        }
+
+        .option:last-child {
+            border-bottom: none;
         }
 
         #image-container {
@@ -52,19 +67,30 @@
             height: 0;
             padding-bottom: 70%;
             overflow: hidden;
-            margin-bottom: 20px;
+            /* margin-bottom: 20px; */
         }
 
         #dark-mode-toggle {
-            margin-bottom: 2em;
+            /* margin-bottom: 2em; */
         }
 
-        #formula-display {
-            margin-top: 20px;
+        #formula-container {
+            /* margin-top: 20px; */
             font-family: monospace;
         }
+
+        #blend-mode-math {
+            font-family: monospace;
+        }
+
+        #blend-mode-description {
+            font-family: monospace;
+            font-weight: lighter;
+        }
+
         
     </style>
+
 </head>
 <body class="dark-mode">
     <div id="app-container">
@@ -73,23 +99,39 @@
         </div>
 
         <div id="options-container">
-            <h1>Options:</h1>
+            <h2>Options:</h2>
 
-            <div id="blend-mode-select">
+            <div id="blend-mode-select" class="option">
             <label for="blend-mode">Choose a blend mode:</label>
             <select name="blend-mode" id="blend-mode">
                 <option value="normal">Normal</option>
-                <option value="multiply">Multiply</option>
-                <option value="screen">Screen</option>
-                <option value="overlay">Overlay</option>
+                <option value="disolve">Dissolve</option>
+                <option disabled>──────────</option>
                 <option value="darken">Darken</option>
-                <option value="lighten">Lighten</option>
-                <option value="color-dodge">Color Dodge</option>
+                <option value="multiply">Multiply</option>
                 <option value="color-burn">Color Burn</option>
-                <option value="hard-light">Hard Light</option>
+                <option value="linear-burn">Linear Burn</option>
+                <option value="darker-color">Darker Color</option>
+                <option disabled>──────────</option>
+                <option value="lighten">Lighten</option>
+                <option value="screen">Screen</option>
+                <option value="color-dodge">Color Dodge</option>
+                <option value="linear-dodge">Linear Dodge (Add)</option>
+                <option value="lighter-color">Lighter Color</option>
+                <option disabled>──────────</option>
+                <option value="overlay">Overlay</option>
                 <option value="soft-light">Soft Light</option>
+                <option value="hard-light">Hard Light</option>
+                <option value="vivid-light">Vivid Light</option>
+                <option value="linear-light">Linear Light</option>
+                <option value="pin-light">Pin Light</option>
+                <option value="hard-mix">Hard Mix</option>
+                <option disabled>──────────</option>
                 <option value="difference">Difference</option>
                 <option value="exclusion">Exclusion</option>
+                <option value="subtract">Subtract</option>
+                <option value="divide">Divide</option>
+                <option disabled>──────────</option>
                 <option value="hue">Hue</option>
                 <option value="saturation">Saturation</option>
                 <option value="color">Color</option>
@@ -98,98 +140,200 @@
 
             </div>
 
-            <div id="color-select">
-            <label for="color">Choose a color:</label>
-            <input type="color" id="color" name="color" value="#ff1493">
+            <div id="color-select" class="option">
+                <label for="color">Choose a color:</label>
+                <input type="color" id="color" name="color" value="#ff1493">
+                <div id="colorBox"></div>
             </div>
 
-            <div id="color-wipe-slider">
-            <label for="color-wipe">Color Wipe:</label>
-            <input type="range" min="0" max="100" value="0" id="color-wipe">
+            <div id="color-wipe-slider" class="option">
+                <label for="color-wipe">Color Wipe:</label>
+                <input type="range" min="0" max="100" value="0" id="color-wipe">
             </div>
 
-            <div id="formula-display">
-            <h2>Blend Mode Formula</h2>
-            <p id="formula-text"></p>
+            <div id="formula-container" class="option">
+                <h3>Blend Mode Formula</h3>
+                <p id="formula-text"></p>
             </div>
 
-            <div id="dark-mode-toggle">
-            <label for="dark-mode">Dark mode:</label>
-            <input type="checkbox" id="dark-mode" checked>
+            <div>
+                <h3>Blend Mode Description</h3>
+                <p id="blend-mode-description"></p>
+            </div>
+            
+            <div id="dark-mode-toggle" class="option">
+                <label for="dark-mode">Dark mode:</label>
+                <input type="checkbox" id="dark-mode" checked>
             </div>
         </div>
     </div>
-  
-	<!-- <svg id="mouse-follow" width="250" height="100" xmlns="http://www.w3.org/2000/svg" style="display: none">
-		<path id="mouse-path" d="M0,0 h100 a20,20 0 0,1 20,20 v30 h-120 v-50" fill="#000" stroke="#fff" stroke-width="3"/>
-	</svg> -->
-
+    
+    
     <script>
-        const colorBox = document.querySelector('#color-box');
-        const colorWipeSlider = document.querySelector('#color-wipe');
-        const blendModeSelect = document.querySelector('#blend-mode');
-        const colorSelect = document.querySelector('#color');
-        const formulaText = document.querySelector('#formula-text');
-        const svgElement = document.querySelector("#mouse-follow");
-        const imageContainer = document.querySelector(".image-container");
+        window.onload = function() {
+            // MathJax setup
+            MathJax.typesetPromise();
         
-        const darkModeToggle = document.querySelector('#dark-mode');
-        if (darkModeToggle.checked) {
-            document.body.classList.add('dark-mode');
-        }
+            const blendModeSelect = document.querySelector('#blend-mode');
+            const colorSelect = document.querySelector('#color');
+            const svgElement = document.querySelector("#mouse-follow");
+            const imageContainer = document.querySelector("#image-container");
+            const darkModeToggle = document.querySelector('#dark-mode');
 
-        const formulas = {
-        normal: 'Result = TopLayer',
-        multiply: 'Result = BottomLayer * TopLayer',
-        screen: 'Result = 1 - (1 - BottomLayer) * (1 - TopLayer)',
-        overlay: 'Result = (BottomLayer < 0.5) ? (2 * BottomLayer * TopLayer) : (1 - 2 * (1 - BottomLayer) * (1 - TopLayer))',
-        darken: 'Result = min(BottomLayer, TopLayer)',
-        lighten: 'Result = max(BottomLayer, TopLayer)',
-        'color-dodge': 'Result = BottomLayer / (1 - TopLayer)',
-        'color-burn': 'Result = 1 - (1 - BottomLayer) / TopLayer',
-        'hard-light': 'Result = (TopLayer < 0.5) ? (2 * BottomLayer * TopLayer) : (1 - 2 * (1 - BottomLayer) * (1 - TopLayer))',
-        'soft-light': 'Result = (TopLayer < 0.5) ? (2 * BottomLayer * TopLayer + BottomLayer^2) : (2 * BottomLayer * (1 - TopLayer) + sqrt(BottomLayer))',
-        difference: 'Result = |BottomLayer - TopLayer|',
-        exclusion: 'Result = BottomLayer + TopLayer - 2 * BottomLayer * TopLayer',
-        hue: 'Result uses the hue of the TopLayer, and the saturation and luminosity of the BottomLayer',
-        saturation: 'Result uses the saturation of the TopLayer, and the hue and luminosity of the BottomLayer',
-        color: 'Result uses the hue and saturation of the TopLayer, and the luminosity of the BottomLayer',
-        luminosity: 'Result uses the luminosity of the TopLayer, and the hue and saturation of the BottomLayer',
-        };
-        
-        let color = colorSelect.value;
-        
-        blendModeSelect.addEventListener('change', (event) => {
-        colorBox.style.mixBlendMode = event.target.value;
-        formulaText.innerText = formulas[event.target.value] || 'No formula available for this blend mode';
-        });
-
-        colorSelect.addEventListener('change', (event) => {
-        color = event.target.value;
-        colorBox.style.background = color;
-        });
-
-        darkModeToggle.addEventListener('change', (event) => {
-            if(event.target.checked) {
-                document.body.classList.remove('light-mode');
+    
+            const blendModes = {
+                normal: {
+                    formula: '\\text{Result} = T',
+                    definition: 'This mode simply containerformula-containers the top layer.'
+                },
+                dissolve: {
+                    formula: '',
+                    definition: 'Affects the layer randomly.'
+                },
+                darken: {
+                    formula: '\\text{Result} = \\min(B, T)',
+                    definition: 'This mode selects the darker color between the top and bottom layer for each pixel.'
+                },
+                multiply: {
+                    formula: '\\text{Result} = B \\times T',
+                    definition: 'This mode multiplies the colors of the top and bottom layer, resulting in a darker color.'
+                },
+                'color-burn': {
+                    formula: '\\text{Result} = 1 - \\frac{1 - B}{T}',
+                    definition: 'Intensifies the darker tones in your image.'
+                },
+                'linear-burn': {
+                    formula: '',
+                    definition: 'Close to Multiply but with more intense results. Exact formula varies.'
+                },
+                'darker-color': {
+                    formula: '',
+                    definition: 'Compares the total of all channel values for the blend and base color and containerformula-containers the lower value color. Exact formula varies.'
+                },
+                lighten: {
+                    formula: '\\text{Result} = \\max(B, T)',
+                    definition: 'This mode selects the lighter color between the top and bottom layer for each pixel.'
+                },
+                screen: {
+                    formula: '\\text{Result} = 1 - (1 - B) \\times (1 - T)',
+                    definition: 'This mode multiplies the inverses of the colors of the top and bottom layer, resulting in a lighter color.'
+                },
+                'color-dodge': {
+                    formula: '\\text{Result} = \\frac{B}{1 - T}',
+                    definition: 'Brightens your image by decreasing contrast.'
+                },
+                'linear-dodge': {
+                    formula: '',
+                    definition: 'Similar to Screen but with more intense results. Exact formula varies.'
+                },
+                'lighter-color': {
+                    formula: '',
+                    definition: 'Compares the total of all channel values for the blend and base color and containerformula-containers the higher value color. Exact formula varies.'
+                },
+                overlay: {
+                    formula: '\\text{Result} = (B < 0.5) ? (2 \\times B \\times T) : (1 - 2 \\times (1 - B) \\times (1 - T))',
+                    definition: 'This mode multiplies or screens the colors depending on the base color.'
+                },
+                'soft-light': {
+                    formula: '\\text{Result} = (T < 0.5) ? (2 \\times B \\times T + B^2) : (2 \\times B \\times (1 - T) + \\sqrt{B})',
+                    definition: 'This mode darkens or lightens the colors by decreasing or increasing the contrast, depending on the blend color.'
+                },
+                'hard-light': {
+                    formula: '\\text{Result} = (T < 0.5) ? (2 \\times B \\times T) : (1 - 2 \\times (1 - B) \\times (1 - T))',
+                    definition: 'This mode multiplies or screens the colors depending on the blend color.'
+                },
+                'vivid-light': {
+                    formula: '',
+                    definition: 'Burns or dodges the colors by increasing or decreasing the contrast, depending on the blend color. Exact formula varies.'
+                },
+                'linear-light': {
+                    formula: '',
+                    definition: 'Burns or dodges the colors by decreasing or increasing the brightness, depending on the blend color. Exact formula varies.'
+                },
+                'pin-light': {
+                    formula: '',
+                    definition: 'Replaces the colors, depending on the blend color. Exact formula varies.'
+                },
+                'hard-mix': {
+                    formula: '',
+                    definition: 'Adds the red, green and blue channel values of the blend color to those of the base color. Exact formula varies.'
+                },
+                difference: {
+                    formula: '\\text{Result} = |B - T|',
+                    definition: 'This mode subtracts the bottom layer color from the top layer or vice versa, depending on which one is lighter.'
+                },
+                exclusion: {
+                    formula: '\\text{Result} = B + T - 2 \\times B \\times T',
+                    definition: 'This mode creates an effect similar to Difference, but with lower contrast.'
+                },
+                subtract: {
+                    formula: '',
+                    definition: 'Looks at the color information in each channel and subtracts the blend color from the base color. Exact formula varies.'
+                },
+                divide: {
+                    formula: '',
+                    definition: 'Looks at the color information in each channel and divides the base color by the blend color. Exact formula varies.'
+                },
+                hue: {
+                    formula: '',
+                    definition: 'Result uses the hue of the TopLayer, and the saturation and luminosity of the BottomLayer'
+                },
+                saturation: {
+                    formula: '',
+                    definition: 'Result uses the saturation of the TopLayer, and the hue and luminosity of the BottomLayer'
+                },
+                color: {
+                    formula: '',
+                    definition: 'Result uses the hue and saturation of the TopLayer, and the luminosity of the BottomLayer'
+                },
+                luminosity: {
+                    formula: '',
+                    definition: 'Result uses the luminosity of the TopLayer, and the hue and saturation of the BottomLayer'
+                }
+            };
+    
+            if (darkModeToggle.checked) {
                 document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
-                document.body.classList.add('light-mode');
-            }
-        });
+            }   
         
-        window.addEventListener('mousemove', function(e) {
-            svgElement.style.position = "absolute";
-            svgElement.style.left = (e.pageX + 10) + 'px';
-            svgElement.style.top = (e.pageY + 5) + 'px';
-        });
+            const updateBlendMode = (mode) => {
+                if (blendModes[mode]) {
+                    document.getElementById('blend-mode-math').textContent = blendModes[mode].formula;
+                    document.getElementById('blend-mode-description').textContent = blendModes[mode].definition;
+                    // Run MathJax again after updating the text content
+                    MathJax.typesetPromise();
+                } else {
+                    document.getElementById('blend-mode-math').textContent = 'No formula available for this blend mode';
+                    document.getElementById('blend-mode-description').textContent = '';
+                }
+            };
         
-        colorWipeSlider.addEventListener('input', (event) => {
-        colorBox.style.width = `${event.target.value}%`;
-        });
+            let color = colorSelect.value;
         
+            blendModeSelect.addEventListener('change', (event) => {
+                updateBlendMode(event.target.value);
+            });
+        
+            colorSelect.addEventListener('change', (event) => {
+                color = event.target.value;
+                // colorBox.style.background = color;
+            });
+        
+            darkModeToggle.addEventListener('change', (event) => {
+                if(event.target.checked) {
+                    document.documentElement.style.setProperty('--bg-color', '#333');
+                    document.documentElement.style.setProperty('--fg-color', '#eaeaea');
+                } else {
+                    document.documentElement.style.setProperty('--bg-color', '#eaeaea');
+                    document.documentElement.style.setProperty('--fg-color', '#333');
+                }
+            });
+        
+            // Update blend mode initially
+            updateBlendMode(blendModeSelect.value);
+        }
     </script>
+    
 
 </body>
 </html>
