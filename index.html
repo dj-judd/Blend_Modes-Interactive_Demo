@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
+    <head>
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
+        <style>
+        
+        @keyframes blend-transition {
+            from {
+                mix-blend-mode: /* starting blend mode */;
+            }
+            to {
+                mix-blend-mode: /* ending blend mode */;
+            }
+        }
+        
         :root {
             --bg-color: #333;  /* Default to dark mode */
             --fg-color: #eaeaea;
@@ -69,6 +79,8 @@
             background-color: var(--blend-color);
             border-radius: 1.5em;
             mix-blend-mode: normal; /* Default blend mode */
+            overflow: hidden;
+            transition: mix-blend-mode 0.3s;
         }
 
         #bottom-image{
@@ -96,7 +108,7 @@
         }
 
         #graph-container {
-            
+            /* height: 500px; */
         }
 
         #blend-mode-description-text {
@@ -169,7 +181,7 @@
             </div>
 
             <div id="graph-container" class="option">
-                <canvas id="chart"></canvas>
+                <canvas id="graph"></canvas>
             </div>
 
             <div id="formula-container" class="option">
@@ -190,6 +202,7 @@
         const blendModeDescriptionText = document.querySelector('#blend-mode-description-text');
         const darkModeToggle = document.querySelector('#dark-mode');
         const overlayDiv = document.querySelector('#blend-overlay-container');
+        const colorPicker = document.querySelector('#color');
     
         const blendModes = {
             normal: {
@@ -335,8 +348,22 @@
             const blendModeMath = document.getElementById('blend-mode-math');
             const blendModeDescriptionText = document.getElementById('blend-mode-description-text');
             const darkModeCheckbox = document.getElementById('dark-mode');
+
+            const imageContainer = document.querySelector('#image-container');
+            const blendOverlay = document.querySelector('#blend-overlay-container');
+            blendOverlay.style.height = `${imageContainer.offsetHeight}px`;
+
+            colorPicker.addEventListener('input', (event) => {
+                const color = event.target.value;
+                document.documentElement.style.setProperty('--blend-color', color);
+                });
+
             // Canvas Creation
-            const ctx = document.getElementById('chart').getContext('2d');
+            const ctx = document.getElementById('graph').getContext('2d');
+
+            // Apply CSS styling to make the line thinner
+            const chartCanvas = document.getElementById('graph');
+            chartCanvas.height = 300; // Adjust this value to make the chart taller
 
             // Initialize chart
             let myChart = new Chart(ctx, {
@@ -344,17 +371,13 @@
                 data: {
                     labels: Array.from({length: 101}, (_, i) => i/100),  // x-axis: Top layer color intensity from 0 to 1
                     datasets: [{
-                        label: 'Bottom',
-                        data: Array.from({length: 101}, (_, i) => i/100),  // y-axis: Bottom layer color intensity (initially same as T)
-                        backgroundColor: 'rgba(0, 0, 255, 0.1)',
-                        borderColor: 'rgba(0, 0, 255, 1)',
-                        borderWidth: 2
-                    }, {
-                        label: 'Blended',
+                        label: 'Blended Image',
                         data: [],  // y-axis: Blended color intensity (to be filled later)
-                        backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                        borderColor: 'rgba(255, 0, 0, 1)',
-                        borderWidth: 2
+                        backgroundColor: '--bg-color',
+                        borderColor: '--fg-color',
+                        borderWidth: 0,
+                        lineTension: 0.1,
+                        
                     }]
                 },
                 options: {
@@ -365,27 +388,19 @@
                     plugins: {
                         grid: {
                             display: true,
-                            color: function(context) {
-                                if (context.tick.value % 0.1 === 0) {
-                                    return context.chart.ctx.style.getPropertyValue('--fg-color');
-                                } else {
-                                    return 'rgba(0, 0, 0, 0.1)';
-                                }
-                            },
+                            color: '--fg-color',
                             lineWidth: function(context) {
                                 return context.tick.value % 0.1 === 0 ? 0.5 : 0.2;
                             },
                             drawBorder: false,
                             drawOnChartArea: true,
-                            drawTicks: true,
-                            tickLength: 2,
-                            tickWidth: function(context) {
-                                return context.tick.value % 0.1 === 0 ? 0.5 : 0.2;
-                            },
-                            offset: false,
+                            drawTicks: false,
+                            tickLength: 0.001,
+                            tickWidth: 0.001,
+                            offset: true,
                             borderDash: [],
                             borderDashOffset: 0,
-                            borderWidth: 1,
+                            borderWidth: 0,
                         }
                     }
                 }
@@ -403,6 +418,10 @@
                 updateBlendMode(event.target.value);
             });
 
+            window.addEventListener('resize', () => {
+                blendOverlay.style.height = `${imageContainer.offsetHeight}px`;
+            });
+
             darkModeCheckbox.addEventListener('change', (event) => {
                 document.documentElement.style.setProperty('--bg-color', event.target.checked ? '#333' : '#eaeaea');
                 document.documentElement.style.setProperty('--fg-color', event.target.checked ? '#eaeaea' : '#333');
@@ -411,6 +430,8 @@
             function updateBlendMode(blendMode) {
                 // Get the selected blend mode
                 const selectedBlendMode = blendModes[blendMode];
+                const blendOverlay = document.querySelector('#blend-overlay-container');
+                blendOverlay.style.mixBlendMode = blendMode;
 
                 // Check if the selected blend mode exists
                 if (selectedBlendMode) {
@@ -422,7 +443,7 @@
                     MathJax.typeset();
 
                     // Generate graph data
-                    generateGraphData(selectedBlendMode.function);
+                    generateGraphData(blendModes[blendMode].function);
                 } else {
                     // Handle error: Selected blend mode doesn't exist
                     console.error(`Blend mode '${blendMode}' does not exist.`);
@@ -438,7 +459,7 @@
                     });
 
                     // Update chart
-                    myChart.data.datasets[1].data = blendedData;
+                    myChart.data.datasets[0].data = blendedData;
                     myChart.update();
                 } else {
                     // Handle error: Blend function is not defined or not a function

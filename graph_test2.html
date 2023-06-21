@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="500" height="500" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<script>
+    const canvas = document.getElementById("myCanvas");
+    const ctx = canvas.getContext("2d");
+    const canvasHeight = canvas.height;
+    const canvasWidth = canvas.width;
+
+    const scaleFactor = 0.01;
+
+    const drawPixel = (x, y, r = 1, color = 'white') => {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+
+    const drawAxis = () => {
+        ctx.beginPath();
+        ctx.moveTo(0, canvasHeight / 2);
+        ctx.lineTo(canvasWidth, canvasHeight / 2);
+        ctx.moveTo(canvasWidth / 2, 0);
+        ctx.lineTo(canvasWidth / 2, canvasHeight);
+        ctx.stroke();
+    }
+
+    const functions = [
+        x => Math.pow(x*scaleFactor, 2)/scaleFactor, // f(x) = x^2
+        x => x*scaleFactor, // f(x) = x
+        x => -x*scaleFactor, // f(x) = -x
+    ];
+
+    let currentFunctionIndex = 0;
+
+    const drawGraph = () => {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        drawAxis();
+        for(let x=0; x<canvasWidth/2; x++) {
+            let y = functions[currentFunctionIndex](x);
+            drawPixel(canvasWidth/2+x, canvasHeight/2-y);
+        }
+        currentFunctionIndex = (currentFunctionIndex + 1) % functions.length;
+    }
+
+    drawGraph(); // draw the initial graph
+    setInterval(drawGraph, 2000); // change the function every 2 seconds
+</script>
+
+</body>
+</html>

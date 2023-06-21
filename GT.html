@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<body>
+<style>
+    #mySvg {
+        width: 500px;
+        height: 500px;
+    }
+</style>
+<svg id="mySvg" viewBox="0 0 500 500"></svg>
+<script>
+let svg = document.getElementById('mySvg');
+let gridScale = 10;
+let t = 0;
+let direction = 1;
+let pause = false;
+let pauseTime = Date.now();
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function drawGrid() {
+    // horizontal grid lines
+    for (let i = 0; i <= svg.viewBox.baseVal.height; i += svg.viewBox.baseVal.height / gridScale) {
+        let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', 0);
+        line.setAttribute('y1', i);
+        line.setAttribute('x2', svg.viewBox.baseVal.width);
+        line.setAttribute('y2', i);
+        line.setAttribute('stroke', 'black');
+        line.setAttribute('stroke-width', '0.1');
+        svg.appendChild(line);
+    }
+
+    // vertical grid lines
+    for (let i = 0; i <= svg.viewBox.baseVal.width; i += svg.viewBox.baseVal.width / gridScale) {
+        let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', i);
+        line.setAttribute('y1', 0);
+        line.setAttribute('x2', i);
+        line.setAttribute('y2', svg.viewBox.baseVal.height);
+        line.setAttribute('stroke', 'black');
+        line.setAttribute('stroke-width', '0.1');
+        svg.appendChild(line);
+    }
+}
+
+function draw() {
+    // Clear the SVG
+    while (svg.lastChild) {
+        svg.removeChild(svg.lastChild);
+    }
+
+    // Draw the grid
+    drawGrid();
+
+    // Create the path
+    let path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'black');
+    path.setAttribute('stroke-width', '1.5');
+
+    let d = 'M0,' + svg.viewBox.baseVal.height; // start at the bottom left corner
+    let easedT = easeInOutCubic(t);
+    for (let x = 0; x <= svg.viewBox.baseVal.width; x += 5) {
+        let yLinear = svg.viewBox.baseVal.height - x * svg.viewBox.baseVal.height / svg.viewBox.baseVal.width;
+        let yCurve = svg.viewBox.baseVal.height - x * x * svg.viewBox.baseVal.height / (svg.viewBox.baseVal.width * svg.viewBox.baseVal.width);
+        let y = (1 - easedT) * yLinear + easedT * yCurve;
+        d += ' L' + x + ',' + y;
+    }
+    path.setAttribute('d', d);
+
+    // Add the path to the SVG
+    svg.appendChild(path);
+
+    // If we're not pausing, update t
+    if (!pause) {
+        t += 0.005 * direction;
+    }
+
+    // If t > 1 or t < 0, pause and reverse direction
+    if (t > 1 || t < 0) {
+        direction *= -1;
+        if (!pause) {
+            pauseTime = Date.now();
+        }
+        pause = true;
+    }
+
+    // If we've been pausing for 0.5 seconds, resume animation
+    if (pause && Date.now() - pauseTime > 500) {
+        pause = false;
+    }
+
+    // Draw the next frame
+    requestAnimationFrame(draw);
+}
+
+// Start the animation
+draw();
+</script>
+</body>
+</html>

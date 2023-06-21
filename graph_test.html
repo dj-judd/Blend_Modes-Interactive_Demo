@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blend Mode Graphs</title>
+    <style>
+        .chart-container {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blend Mode Graphs</h1>
+
+    <div class="chart-container">
+        <canvas id="hueChart" width="400" height="200"></canvas>
+        <canvas id="saturationChart" width="400" height="200"></canvas>
+        <canvas id="luminosityChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        // Function to calculate the Screen blend mode
+        function screenBlendMode(a, b) {
+            return 1 - (1 - a) * (1 - b);
+        }
+
+        window.addEventListener('load', function() {
+            var hueChart = document.getElementById('hueChart');
+            var saturationChart = document.getElementById('saturationChart');
+            var luminosityChart = document.getElementById('luminosityChart');
+
+            var hueContext = hueChart.getContext('2d');
+            var saturationContext = saturationChart.getContext('2d');
+            var luminosityContext = luminosityChart.getContext('2d');
+
+            var x, y, a, b, result;
+
+            // Draw Hue chart
+            for (x = 0; x < hueChart.width; x++) {
+                a = x / hueChart.width;
+
+                hueContext.beginPath();
+                hueContext.moveTo(x, 0);
+
+                for (y = 0; y < hueChart.height; y++) {
+                    b = y / hueChart.height;
+                    result = screenBlendMode(a, b);
+                    hueContext.lineTo(x, y * hueChart.height);
+                }
+
+                hueContext.strokeStyle = 'red';
+                hueContext.stroke();
+            }
+
+            // Draw Saturation chart
+            for (x = 0; x < saturationChart.width; x++) {
+                a = x / saturationChart.width;
+
+                saturationContext.beginPath();
+                saturationContext.moveTo(x, 0);
+
+                for (y = 0; y < saturationChart.height; y++) {
+                    b = y / saturationChart.height;
+                    result = screenBlendMode(a, b);
+                    saturationContext.lineTo(x, y * saturationChart.height);
+                }
+
+                saturationContext.strokeStyle = 'green';
+                saturationContext.stroke();
+            }
+
+            // Draw Luminosity chart
+            for (x = 0; x < luminosityChart.width; x++) {
+                a = x / luminosityChart.width;
+
+                luminosityContext.beginPath();
+                luminosityContext.moveTo(x, 0);
+
+                for (y = 0; y < luminosityChart.height; y++) {
+                    b = y / luminosityChart.height;
+                    result = screenBlendMode(a, b);
+                    luminosityContext.lineTo(x, y * luminosityChart.height);
+                }
+
+                luminosityContext.strokeStyle = 'blue';
+                luminosityContext.stroke();
+            }
+        });
+    </script>
+</body>
+</html>
